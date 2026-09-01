@@ -387,7 +387,7 @@ REVISÃO
    PUBLICADA
 ```
 
-O Dashboard permitirá revisar nome, descrição, imagem, preço, margem/markup e aprovar ou rejeitar.
+O Dashboard permitirá revisar nome, descrição, imagem, preço (markup) e aprovar ou rejeitar.
 
 ---
 
@@ -409,21 +409,23 @@ Preço aprovado
 Preço público
 ```
 
-Para margem real:
+O modelo padrão do MVP é **MARKUP**, conforme decisão do GATE-02:
 
 ```text
-Preço de venda = Custo / (1 - Margem)
+markup padrão = 30%
+preço público = custo × 1,30
+pricing_type = markup
 ```
 
 Exemplo:
 
 ```text
-Custo: R$ 29,90
-Margem: 30%
-Preço: R$ 42,71
+Custo: R$ 10,00
+Markup: 30%
+Preço público: R$ 13,00
 ```
 
-A definição entre margem e markup deverá ser explícita no sistema.
+O administrador pode alterar o preço sugerido antes da publicação. A margem poderá ser avaliada como conceito futuro, mas **não é regra do MVP**.
 
 ---
 
@@ -469,7 +471,7 @@ Supabase
 └── publications
 ```
 
-Pode conter origem, URL, preço de aquisição, margem, histórico, logs e curadoria.
+Pode conter origem, URL, preço de aquisição, markup, histórico, logs e curadoria.
 
 Público:
 
@@ -610,7 +612,7 @@ JSON poderá ser utilizado somente para fixtures, testes, importações/exporta�
 |---|---|
 | Frontend | React + Vite |
 | Backend | Node.js + TypeScript |
-| API | Fastify |
+| API | Funções serverless na Vercel (Node.js + TypeScript) — sem Fastify |
 | Dashboard | React |
 | Coletor | Python |
 | Browser | Browser Harness |
@@ -620,6 +622,8 @@ JSON poderá ser utilizado somente para fixtures, testes, importações/exporta�
 | Banco de dados | Supabase |
 | Ambiente local | Desenvolvimento/testes |
 | Containerização | Opcional, somente quando necessária ao desenvolvimento/coleta |
+
+> **GATE-02:** Fastify foi descartado no MVP. A camada de API utiliza funções serverless mínimas da Vercel. Decisão registrada em `docs/ADRS/ADR-001-fastify.md` e consolidada em `docs/ARCHITECTURE.md`.
 
 ---
 
@@ -639,21 +643,25 @@ Não criar arquitetura distribuída desnecessária no MVP.
 
 ```text
 pet-em-casa/
-├── frontend/
-├── backend/
-├── dashboard/
+├── frontend/            # aplicação React única (público + /admin)
+├── api/
+│   └── _shared/         # funções serverless Vercel — validação, preço, mensagem
+├── supabase/
+│   └── migrations/
 ├── collector/
+├── scripts/
 ├── docs/
 │   ├── PET_EM_CASA_GERAL.md
+│   ├── ARCHITECTURE.md
+│   ├── ADRS/
 │   └── gates/
-├── scripts/
 ├── .env.example
 ├── .gitignore
 ├── README.md
 └── LICENSE
 ```
 
-A estrutura final poderá ser simplificada durante os Gates, caso frontend, backend e dashboard possam ser organizados de forma mais adequada à Vercel sem criar complexidade desnecessária.
+O MVP utiliza uma **aplicação React única** contendo a área pública e o Dashboard (`/admin`). A camada de API é composta por **funções serverless mínimas da Vercel** (`api/`). Não existem `frontend/`, `backend/` e `dashboard/` como três aplicações separadas.
 
 ---
 
@@ -841,12 +849,12 @@ Depois provar:
 
 ---
 
-# 21. ESTADO INICIAL
+# 21. ESTADO DOS GATES
 
 ```text
-GATE-00  PENDING
-GATE-01  PENDING
-GATE-02  PENDING
+GATE-00  VALIDATED
+GATE-01  VALIDATED
+GATE-02  VALIDATED
 GATE-03  PENDING
 GATE-04  PENDING
 GATE-05  PENDING
@@ -860,6 +868,8 @@ GATE-12  PENDING
 GATE-13  PENDING
 GATE-14  PENDING
 ```
+
+O GATE-02 foi validado e encerrado. O GATE-03 permanece PENDING até novo planejamento aprovado.
 
 ---
 
