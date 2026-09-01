@@ -1,0 +1,13 @@
+{
+  "name": "pet-em-casa",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bootstrap do projeto Pet em Casa",
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "check:bootstrap": "node scripts/check-bootstrap.mjs"
+  }
+}

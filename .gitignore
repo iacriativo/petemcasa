@@ -1,0 +1,28 @@
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+.vite/
+.vercel/
+
+# Environment and local secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Python and Collector local artifacts
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+collector/.cache/
+collector/logs/
+collector/screenshots/
+
+# Operating system and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
