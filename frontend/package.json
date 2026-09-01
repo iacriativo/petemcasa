@@ -1,0 +1,27 @@
+{
+  "name": "pet-em-casa-frontend",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "description": "Frontend do Pet em Casa — aplicação única (público + /admin)",
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.7.0",
+    "typescript": "^5.6.2",
+    "vite": "^6.4.3"
+  }
+}
