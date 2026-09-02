@@ -5,6 +5,7 @@ coverage/
 .vite/
 *.tsbuildinfo
 .vercel/
+supabase/.temp/
 
 # Environment and local secrets
 .env

@@ -855,7 +855,7 @@ Depois provar:
 GATE-00  VALIDATED
 GATE-01  VALIDATED
 GATE-02  VALIDATED
-GATE-03  PENDING
+GATE-03  VALIDATED
 GATE-04  PENDING
 GATE-05  PENDING
 GATE-06  PENDING
@@ -869,7 +869,7 @@ GATE-13  PENDING
 GATE-14  PENDING
 ```
 
-O GATE-02 foi validado e encerrado. O GATE-03 permanece PENDING até novo planejamento aprovado.
+O GATE-03 foi validado e encerrado. O GATE-04 permanece PENDING até novo planejamento aprovado.
 
 ---
 

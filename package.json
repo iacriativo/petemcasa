@@ -9,5 +9,8 @@
   },
   "scripts": {
     "check:bootstrap": "node scripts/check-bootstrap.mjs"
+  },
+  "devDependencies": {
+    "supabase": "^2.116.0"
   }
 }

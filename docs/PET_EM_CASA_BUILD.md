@@ -157,4 +157,14 @@ O GATE-02 foi executado em BUILD com escopo exclusivamente documental, transform
 
 - GATE-01: VALIDATED e encerrado (`9c77a5c`).
 - GATE-02: VALIDATED e encerrado.
-- GATE-03: **NÃO autorizado** até novo planejamento aprovado.
+- GATE-03: VALIDATED e encerrado.
+- GATE-04: PENDING até novo planejamento aprovado.
+
+## 12. Build executado - GATE-03 (Modelo Supabase)
+
+- Projeto Supabase vinculado: `duftidhgewsxsplahmsp`.
+- CLI oficial Supabase adicionada como dependencia de desenvolvimento, por autorizacao explicita.
+- Migrations aplicadas: `20260901130000_initial_schema.sql` e `20260901130100_rls_and_public_catalog.sql`.
+- Validacoes remotas: previa, `db push`, `db lint` sem erros e historico de migrations sincronizado.
+- Evidencias: `docs/gates/GATE-03-MODELO-SUPABASE.md`.
+- Nenhum dado comercial, morador, administrador ou configuracao operacional foi inserido.
