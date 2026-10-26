@@ -1,4 +1,5 @@
 import { BowlIcon, BoneIcon, BottleIcon, BallIcon, HealthIcon, GridIcon } from './icons'
+import { Link } from 'react-router-dom'
 
 const categories = [
   { icon: BowlIcon, name: 'Rações' },
@@ -16,19 +17,19 @@ export default function Categories() {
       </div>
       <div className="cats__scroll">
         {categories.map((cat) => (
-          <button className="cat" key={cat.name} type="button">
+          <Link to="/catalogo" key={cat.name} className="cat">
             <span className="cat__circle">
               <cat.icon className="cat__icon" />
             </span>
             <span className="cat__name">{cat.name}</span>
-          </button>
+          </Link>
         ))}
-        <button className="cat cat--special" type="button">
+        <Link to="/catalogo" className="cat cat--special">
           <span className="cat__circle">
             <GridIcon className="cat__icon" />
           </span>
           <span className="cat__name">Ver todas</span>
-        </button>
+        </Link>
       </div>
     </section>
   )

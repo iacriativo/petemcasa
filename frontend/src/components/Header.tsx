@@ -1,4 +1,5 @@
 import { PawHouseIcon } from './icons'
+import { Link } from 'react-router-dom'
 
 export default function Header() {
   return (
@@ -7,10 +8,10 @@ export default function Header() {
         <span className="header__badge">
           <PawHouseIcon className="header__logo-icon" />
         </span>
-        <div className="header__logo">
+        <Link to="/" className="header__logo">
           PET
           <small>EM CASA</small>
-        </div>
+        </Link>
       </div>
     </header>
   )
