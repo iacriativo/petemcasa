@@ -158,7 +158,7 @@ O GATE-02 foi executado em BUILD com escopo exclusivamente documental, transform
 - GATE-01: VALIDATED e encerrado (`9c77a5c`).
 - GATE-02: VALIDATED e encerrado.
 - GATE-03: VALIDATED e encerrado.
-- GATE-04: PENDING até novo planejamento aprovado.
+- GATE-04: VALIDATED e encerrado.
 
 ## 12. Build executado - GATE-03 (Modelo Supabase)
 
@@ -168,3 +168,21 @@ O GATE-02 foi executado em BUILD com escopo exclusivamente documental, transform
 - Validacoes remotas: previa, `db push`, `db lint` sem erros e historico de migrations sincronizado.
 - Evidencias: `docs/gates/GATE-03-MODELO-SUPABASE.md`.
 - Nenhum dado comercial, morador, administrador ou configuracao operacional foi inserido.
+
+## 13. Build executado - GATE-04 (Backend + Supabase)
+
+- Funções serverless implementadas em `api/`:
+  - `api/orders/index.ts` — POST /api/orders (criação de pedido com rate limiting, idempotência, precificação server-side, transação orders+order_items, mensagem WhatsApp)
+  - `api/orders/[id]/status.ts` — POST /api/orders/:id/status (transição pública restrita CRIADO → ENCAMINHADO_WHATSAPP via order_token)
+  - `api/ingest.ts` — POST /api/ingest (ingestão do Collector protegida por token)
+- Módulos compartilhados em `api/_shared/`:
+  - `supabase.ts` — cliente Supabase com service_role (server-side apenas)
+  - `validation.ts` — validação de entradas com Zod
+  - `pricing.ts` — precificação server-side (markup 30%)
+  - `whatsapp.ts` — montagem da mensagem padrão do WhatsApp
+  - `rate-limit.ts` — rate limiting por IP via tabela rate_guard
+- Configuração: `vercel.json`, `tsconfig.api.json`, `.env.local` (não versionado)
+- Dependências: `@supabase/supabase-js`, `zod`, `typescript`, `@types/node`, `tsx`
+- Validações: TypeScript compila sem erros, build do frontend OK, bootstrap check OK, 9 testes de validação aprovados
+- Evidências: `docs/gates/GATE-04-BACKEND-SUPABASE.md`
+- Nenhum dado comercial, morador, administrador ou configuração operacional foi inserido.

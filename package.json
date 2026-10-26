@@ -11,6 +11,13 @@
     "check:bootstrap": "node scripts/check-bootstrap.mjs"
   },
   "devDependencies": {
-    "supabase": "^2.116.0"
+    "@types/node": "^26.6.5",
+    "supabase": "^2.116.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
+    "zod": "^4.6.7"
   }
 }
