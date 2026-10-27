@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../../lib/supabase'
+import { useState, useEffect } from 'react'
+import { apiClient } from '../../lib/api-client'
 
 export default function AdminConfiguracoes() {
   const [settings, setSettings] = useState<{ condominium_name: string; whatsapp_number: string } | null>(null)
@@ -7,27 +7,21 @@ export default function AdminConfiguracoes() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
 
-  const loadSettings = useCallback(async () => {
+  const loadSettings = async () => {
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('app_settings')
-        .select('condominium_name, whatsapp_number')
-        .eq('id', 1)
-        .single()
-
-      if (error) throw error
+      const data = await apiClient.admin.settings.get()
       setSettings(data)
     } catch {
       setSettings(null)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }
 
   useEffect(() => {
     loadSettings()
-  }, [loadSettings])
+  }, [])
 
   const saveSettings = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,12 +29,7 @@ export default function AdminConfiguracoes() {
     setSaving(true)
     setMessage('')
     try {
-      const { error } = await supabase
-        .from('app_settings')
-        .update({ condominium_name: settings.condominium_name, whatsapp_number: settings.whatsapp_number })
-        .eq('id', 1)
-
-      if (error) throw error
+      await apiClient.admin.settings.update(settings)
       setMessage('Salvo com sucesso')
       setTimeout(() => setMessage(''), 3000)
     } catch {

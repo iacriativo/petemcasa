@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../../lib/supabase'
+import { apiClient } from '../../lib/api-client'
 
 type OrderRow = {
   id: string
@@ -16,18 +16,10 @@ export default function AdminPedidos() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (error) {
-          setOrders([])
-        } else {
-          setOrders((data || []) as OrderRow[])
-        }
-        setLoading(false)
-      })
+    apiClient.admin.orders.list()
+      .then((data) => setOrders((data || []) as OrderRow[]))
+      .catch(() => setOrders([]))
+      .finally(() => setLoading(false))
   }, [])
 
   const statusLabel = (s: string) => {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
+import { apiClient } from '../../lib/api-client'
 import { ChevronRightIcon } from '../../components/icons'
 
 type Stat = { label: string; value: number; color: string }
@@ -12,23 +12,23 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [offersRes, productsRes, ordersRes, catsRes] = await Promise.all([
-          supabase.from('offers').select('status'),
-          supabase.from('products').select('id, active'),
-          supabase.from('orders').select('id, status'),
-          supabase.from('categories').select('id, active'),
+        const [offers, products, orders, cats] = await Promise.all([
+          apiClient.admin.offers.list(),
+          apiClient.admin.products.list(),
+          apiClient.admin.orders.list(),
+          apiClient.admin.categories.list(),
         ])
 
-        const offers = offersRes.data || []
-        const products = productsRes.data || []
-        const orders = ordersRes.data || []
-        const cats = catsRes.data || []
+        const offerList = offers || []
+        const productList = products || []
+        const orderList = orders || []
+        const catList = cats || []
 
         setStats([
-          { label: 'Ofertas pendentes', value: offers.filter((o) => o.status === 'pending').length, color: '#b45309' },
-          { label: 'Produtos ativos', value: products.filter((p) => p.active).length, color: '#15803d' },
-          { label: 'Pedidos recentes', value: orders.length, color: '#1d4ed8' },
-          { label: 'Categorias', value: cats.length, color: '#7c3aed' },
+          { label: 'Ofertas pendentes', value: offerList.filter((o: any) => o.status === 'pending').length, color: '#b45309' },
+          { label: 'Produtos ativos', value: productList.filter((p: any) => p.active).length, color: '#15803d' },
+          { label: 'Pedidos recentes', value: orderList.length, color: '#1d4ed8' },
+          { label: 'Categorias', value: catList.length, color: '#7c3aed' },
         ])
       } catch {
         setStats([

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { apiClient } from '../lib/api-client'
 import { useCart } from '../context/CartContext'
 import { ChevronRightIcon } from '../components/icons'
 
@@ -32,13 +32,7 @@ export default function ProductDetail() {
     setLoading(true)
     setError(null)
     try {
-      const { data, error: supabaseError } = await supabase
-        .from('public_catalog')
-        .select('*')
-        .eq('product_id', product_id)
-        .maybeSingle()
-
-      if (supabaseError) throw supabaseError
+      const data = await apiClient.catalog.get(product_id)
       if (!data) {
         setError('Produto não encontrado')
         return

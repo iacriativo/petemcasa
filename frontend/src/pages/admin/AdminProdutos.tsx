@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../../lib/supabase'
+import { useState, useEffect } from 'react'
+import { apiClient } from '../../lib/api-client'
 
 type ProductRow = {
   id: string
@@ -17,36 +17,26 @@ export default function AdminProdutos() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
 
-  const loadProducts = useCallback(async () => {
+  const loadProducts = async () => {
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
+      const data = await apiClient.admin.products.list()
       setProducts((data || []) as ProductRow[])
     } catch {
       setProducts([])
     } finally {
       setLoading(false)
     }
-  }, [])
+  }
 
   useEffect(() => {
     loadProducts()
-  }, [loadProducts])
+  }, [])
 
   const toggleActive = async (id: string, current: boolean) => {
     setSaving(id)
     try {
-      const { error } = await supabase
-        .from('products')
-        .update({ active: !current })
-        .eq('id', id)
-
-      if (error) throw error
+      await apiClient.admin.products.update(id, { active: !current })
       await loadProducts()
     } catch {
       alert('Erro ao atualizar produto')

@@ -1,18 +1,5 @@
-import { getSupabaseAdmin } from './_shared/supabase'
-
-interface VercelRequest {
-  method?: string
-  headers: Record<string, string | string[] | undefined>
-  body?: unknown
-  query: Record<string, string>
-}
-
-interface VercelResponse {
-  status(code: number): VercelResponse
-  json(data: unknown): VercelResponse
-  setHeader(name: string, value: string): VercelResponse
-  end(data?: any): void
-}
+import { getDataStore } from './_shared/datastore'
+import type { VercelRequest, VercelResponse } from './_shared/types'
 
 const INGESTION_TOKEN = process.env.COLLECTOR_INGESTION_TOKEN
 
@@ -33,7 +20,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Validar token de ingestão
     const authHeader = req.headers['authorization']
     const token = Array.isArray(authHeader) ? authHeader[0] : authHeader
 
@@ -55,36 +41,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return
     }
 
-    const supabase = getSupabaseAdmin()
-
+    const dataStore = getDataStore()
     const inserted = []
-    const errors = []
+    const errors: { source_url: string; error: string }[] = []
 
     for (const offer of offers) {
       try {
-        const { data, error } = await supabase
-          .from('offers')
-          .insert([{
-            product_id: offer.product_id || null,
-            source_id: offer.source_id,
-            source_url: offer.source_url,
-            collected_price: offer.collected_price,
-            original_price: offer.original_price || null,
-            promotion_data: offer.promotion_data || null,
-            availability: offer.availability || 'unknown',
-            status: 'pending',
-            collected_at: offer.collected_at || new Date().toISOString(),
-            expires_at: offer.expires_at || null,
-          }])
-          .select('id, status')
-          .single()
-
-        if (error) {
-          errors.push({ source_url: offer.source_url, error: error.message })
-          continue
-        }
-
-        inserted.push({ id: data.id, status: data.status })
+        const created = await dataStore.offers.create({
+          product_id: offer.product_id || null,
+          source_id: offer.source_id,
+          source_url: offer.source_url,
+          collected_price: offer.collected_price,
+          original_price: offer.original_price || null,
+          promotion_data: offer.promotion_data || null,
+          availability: offer.availability || 'unknown',
+          collected_at: offer.collected_at || new Date().toISOString(),
+          expires_at: offer.expires_at || null,
+        })
+        inserted.push({ id: created.id, status: created.status })
       } catch (err: any) {
         errors.push({ source_url: offer.source_url, error: err.message })
       }

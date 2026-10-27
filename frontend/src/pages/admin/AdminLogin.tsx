@@ -18,7 +18,7 @@ export default function AdminLogin() {
     const { error: err } = await signIn(email, password)
     setSubmitting(false)
     if (err) {
-      setError('E-mail ou senha inválidos')
+      setError(err.message || 'Credenciais inválidas')
       return
     }
     navigate('/admin')

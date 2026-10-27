@@ -1,52 +1,52 @@
-import { createContext, useContext, useCallback, useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { createContext, useContext, useCallback, useState, useEffect, ReactNode } from 'react'
+import { apiClient } from '../lib/api-client'
 
 interface AuthContextType {
-  user: any | null
+  user: { email: string } | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: any }>
-  signOut: () => Promise<void>
+  signOut: () => void
   isAuthenticated: boolean
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<any | null>(null)
+const TOKEN_KEY = 'pet-em-casa-admin-token'
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null)
-      setLoading(false)
-    })
-
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
-
-    return () => {
-      sub?.subscription?.unsubscribe?.()
+    const storedToken = localStorage.getItem(TOKEN_KEY)
+    if (storedToken) {
+      setToken(storedToken)
     }
+    setLoading(false)
   }, [])
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error }
+    try {
+      const data = await apiClient.auth.login(email, password)
+      localStorage.setItem(TOKEN_KEY, data.token)
+      setToken(data.token)
+      return { error: null }
+    } catch (error: any) {
+      return { error }
+    }
   }, [])
 
-  const signOut = useCallback(async () => {
-    await supabase.auth.signOut()
-    setUser(null)
+  const signOut = useCallback(() => {
+    localStorage.removeItem(TOKEN_KEY)
+    setToken(null)
   }, [])
 
   const value = {
-    user,
+    user: token ? { email: 'admin' } : null,
     loading,
     signIn,
     signOut,
-    isAuthenticated: !!user,
+    isAuthenticated: !!token,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

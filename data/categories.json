@@ -1,0 +1,52 @@
+[
+  {
+    "id": "1",
+    "name": "Rações",
+    "slug": "racoes",
+    "parent_id": null,
+    "active": true,
+    "sort_order": 0,
+    "created_at": "2026-09-01T00:00:00.000Z",
+    "updated_at": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "2",
+    "name": "Petiscos",
+    "slug": "petiscos",
+    "parent_id": null,
+    "active": true,
+    "sort_order": 1,
+    "created_at": "2026-09-01T00:00:00.000Z",
+    "updated_at": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "3",
+    "name": "Higiene",
+    "slug": "higiene",
+    "parent_id": null,
+    "active": true,
+    "sort_order": 2,
+    "created_at": "2026-09-01T00:00:00.000Z",
+    "updated_at": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "4",
+    "name": "Brinquedos",
+    "slug": "brinquedos",
+    "parent_id": null,
+    "active": true,
+    "sort_order": 3,
+    "created_at": "2026-09-01T00:00:00.000Z",
+    "updated_at": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "5",
+    "name": "Saúde",
+    "slug": "saude",
+    "parent_id": null,
+    "active": true,
+    "sort_order": 4,
+    "created_at": "2026-09-01T00:00:00.000Z",
+    "updated_at": "2026-09-01T00:00:00.000Z"
+  }
+]

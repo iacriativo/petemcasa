@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from './supabase'
+import { getDataStore } from './datastore'
 
 export interface WhatsAppMessage {
   order_id: string
@@ -7,22 +7,17 @@ export interface WhatsAppMessage {
 }
 
 export async function buildWhatsAppMessage(orderId: string, items: { product_name: string; quantity: number }[], total: number): Promise<WhatsAppMessage> {
-  const supabase = getSupabaseAdmin()
+  const dataStore = getDataStore()
+  const settings = await dataStore.settings.get()
 
-  const { data: settings, error } = await supabase
-    .from('app_settings')
-    .select('condominium_name, whatsapp_number')
-    .eq('id', 1)
-    .single()
-
-  if (error || !settings) {
+  if (!settings) {
     throw new Error('Configuração do condomínio não encontrada')
   }
 
   const condominio = settings.condominium_name
   const whatsappNumber = settings.whatsapp_number
 
-  const itensTexto = items.map(i => `• ${i.quantity}x ${i.product_name}`).join('\n')
+  const itensTexto = items.map((i) => `• ${i.quantity}x ${i.product_name}`).join('\n')
 
   const message = `🐾 *PET EM CASA — NOVO PEDIDO*
 

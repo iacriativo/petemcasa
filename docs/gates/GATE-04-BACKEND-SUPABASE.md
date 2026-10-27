@@ -1,6 +1,8 @@
 # GATE-04 - Backend + Supabase
 
-**Status:** VALIDATED
+**Status:** ARCHIVED (superseded)
+
+> **Arquivado:** Este Gate foi substituído pela remoção do Supabase do MVP. Veja `docs/gates/GATE-PRE-PLANO-REMOCAO-SUPABASE.md`. As funções serverless persistem, agora via `DataStore` abstrato (JSON local para MVP).
 
 **Data:** 26/10/2026
 

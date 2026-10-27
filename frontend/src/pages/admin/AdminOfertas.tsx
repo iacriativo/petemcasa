@@ -1,15 +1,15 @@
-import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../../lib/supabase'
+import { useEffect, useState } from 'react'
+import { apiClient } from '../../lib/api-client'
 
 type OfferRow = {
   id: string
-  product_id: string
+  product_id: string | null
   collected_price: number
   original_price?: number | null
   availability: string
   status: string
   collected_at: string
-  products: {
+  products?: {
     id: string
     name: string
     description?: string | null
@@ -25,47 +25,26 @@ export default function AdminOfertas() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
 
-  const loadOffers = useCallback(async () => {
+  const loadOffers = async () => {
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('offers')
-        .select(`
-          id,
-          product_id,
-          collected_price,
-          original_price,
-          availability,
-          status,
-          collected_at,
-          products (
-            id, name, description, brand, category_id, public_image_url, active
-          )
-        `)
-        .order('collected_at', { ascending: false })
-
-      if (error) throw error
-      setOffers((data || []) as unknown as OfferRow[])
+      const data = await apiClient.admin.offers.list('pending')
+      setOffers((data || []) as OfferRow[])
     } catch {
       setOffers([])
     } finally {
       setLoading(false)
     }
-  }, [])
+  }
 
   useEffect(() => {
     loadOffers()
-  }, [loadOffers])
+  }, [])
 
   const updateStatus = async (id: string, status: string) => {
     setSaving(id)
     try {
-      const { error } = await supabase
-        .from('offers')
-        .update({ status })
-        .eq('id', id)
-
-      if (error) throw error
+      await apiClient.admin.offers.update(id, { status })
       await loadOffers()
     } catch {
       alert('Erro ao atualizar status da oferta')

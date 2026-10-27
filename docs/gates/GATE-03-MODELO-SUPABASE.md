@@ -1,6 +1,8 @@
 # GATE-03 - Modelo de dados Supabase
 
-**Status:** VALIDATED
+**Status:** ARCHIVED (superseded)
+
+> **Arquivado:** Este Gate foi substituído pela remoção do Supabase do MVP. Veja `docs/gates/GATE-PRE-PLANO-REMOCAO-SUPABASE.md`. As migrations SQL preservam o modelo conceitual para migração futura.
 
 **Data:** 01/09/2026
 

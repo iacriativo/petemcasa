@@ -1,19 +1,6 @@
-import { getSupabaseAdmin } from '../../_shared/supabase'
+import { getDataStore } from '../../_shared/datastore'
 import { validateOrderStatus } from '../../_shared/validation'
-
-interface VercelRequest {
-  method?: string
-  headers: Record<string, string | string[] | undefined>
-  body?: unknown
-  query: Record<string, string>
-}
-
-interface VercelResponse {
-  status(code: number): VercelResponse
-  json(data: unknown): VercelResponse
-  setHeader(name: string, value: string): VercelResponse
-  end(data?: any): void
-}
+import type { VercelRequest, VercelResponse } from '../../_shared/types'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Content-Type', 'application/json')
@@ -39,7 +26,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return
     }
 
-    // Validar entrada
     const validation = validateOrderStatus(req.body)
     if (!validation.success) {
       res.status(400).json({ error: validation.error })
@@ -47,40 +33,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const { order_token } = validation.data
-    const supabase = getSupabaseAdmin()
+    const dataStore = getDataStore()
 
-    // Buscar pedido
-    const { data: order, error: fetchError } = await supabase
-      .from('orders')
-      .select('id, status, order_token')
-      .eq('id', id)
-      .maybeSingle()
+    const order = await dataStore.orders.get(id)
 
-    if (fetchError) throw new Error(`Erro ao buscar pedido: ${fetchError.message}`)
     if (!order) {
       res.status(404).json({ error: 'Pedido não encontrado' })
       return
     }
 
-    // Verificar order_token
     if (order.order_token !== order_token) {
       res.status(401).json({ error: 'Token do pedido inválido' })
       return
     }
 
-    // Apenas transição CRIADO → ENCAMINHADO_WHATSAPP é permitida por token público
     if (order.status !== 'CRIADO') {
       res.status(409).json({ error: `Pedido não está em estado CRIADO (atual: ${order.status})` })
       return
     }
 
-    // Transicionar para ENCAMINHADO_WHATSAPP
-    const { error: updateError } = await supabase
-      .from('orders')
-      .update({ status: 'ENCAMINHADO_WHATSAPP', updated_at: new Date().toISOString() })
-      .eq('id', id)
-
-    if (updateError) throw new Error(`Erro ao atualizar status do pedido: ${updateError.message}`)
+    await dataStore.orders.updateStatus(id, 'ENCAMINHADO_WHATSAPP', order_token)
 
     res.status(200).json({
       order_id: order.id,

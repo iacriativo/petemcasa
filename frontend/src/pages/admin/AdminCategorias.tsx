@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../../lib/supabase'
+import { useState, useEffect } from 'react'
+import { apiClient } from '../../lib/api-client'
 
 type CategoryRow = {
   id: string
@@ -18,36 +18,26 @@ export default function AdminCategorias() {
   const [newName, setNewName] = useState('')
   const [newSlug, setNewSlug] = useState('')
 
-  const loadCategories = useCallback(async () => {
+  const loadCategories = async () => {
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('sort_order', { ascending: true })
-
-      if (error) throw error
+      const data = await apiClient.admin.categories.list()
       setCategories((data || []) as CategoryRow[])
     } catch {
       setCategories([])
     } finally {
       setLoading(false)
     }
-  }, [])
+  }
 
   useEffect(() => {
     loadCategories()
-  }, [loadCategories])
+  }, [])
 
   const toggleActive = async (id: string, current: boolean) => {
     setSaving(id)
     try {
-      const { error } = await supabase
-        .from('categories')
-        .update({ active: !current })
-        .eq('id', id)
-
-      if (error) throw error
+      await apiClient.admin.categories.update(id, { active: !current })
       await loadCategories()
     } catch {
       alert('Erro ao atualizar categoria')
@@ -61,11 +51,7 @@ export default function AdminCategorias() {
     if (!newName.trim() || !newSlug.trim()) return
     setSaving('new')
     try {
-      const { error } = await supabase
-        .from('categories')
-        .insert([{ name: newName.trim(), slug: newSlug.trim(), active: true }])
-
-      if (error) throw error
+      await apiClient.admin.categories.create({ name: newName.trim(), slug: newSlug.trim(), active: true })
       setNewName('')
       setNewSlug('')
       await loadCategories()

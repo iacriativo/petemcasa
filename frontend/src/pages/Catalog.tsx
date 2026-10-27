@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { apiClient } from '../lib/api-client'
 import { useCart } from '../context/CartContext'
 import { ChevronRightIcon, PlusIcon } from '../components/icons'
 
@@ -29,12 +29,7 @@ export default function Catalog() {
     setLoading(true)
     setError(null)
     try {
-      const { data, error: supabaseError } = await supabase
-        .from('public_catalog')
-        .select('*')
-        .order('name', { ascending: true })
-
-      if (supabaseError) throw supabaseError
+      const data = await apiClient.catalog.list()
       setProducts((data || []) as CatalogProduct[])
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar catálogo')

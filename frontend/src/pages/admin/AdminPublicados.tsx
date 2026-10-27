@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../../lib/supabase'
+import { apiClient } from '../../lib/api-client'
 
 type PublicationRow = {
   id: string
@@ -9,7 +9,7 @@ type PublicationRow = {
   status: string
   published_at?: string | null
   unpublished_at?: string | null
-  products: {
+  products?: {
     id: string
     name: string
     public_image_url?: string | null
@@ -21,21 +21,10 @@ export default function AdminPublicados() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase
-      .from('publications')
-      .select(`
-        id, product_id, sale_price, availability, status, published_at, unpublished_at,
-        products (id, name, public_image_url)
-      `)
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (error) {
-          setPublications([])
-        } else {
-          setPublications((data || []) as unknown as PublicationRow[])
-        }
-        setLoading(false)
-      })
+    apiClient.admin.publications.list()
+      .then((data) => setPublications((data || []) as PublicationRow[]))
+      .catch(() => setPublications([]))
+      .finally(() => setLoading(false))
   }, [])
 
   if (loading) {

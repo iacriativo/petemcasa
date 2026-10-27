@@ -1,7 +1,7 @@
 import { ChevronRightIcon, PlusIcon } from './icons'
 import ProductArt from './ProductArt'
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { apiClient } from '../lib/api-client'
 import { useCart } from '../context/CartContext'
 import { Link, useNavigate } from 'react-router-dom'
 
@@ -21,14 +21,8 @@ export default function Offers() {
   const loadOffers = useCallback(async () => {
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('public_catalog')
-        .select('product_id, name, sale_price, public_image_url, availability')
-        .order('sale_price', { ascending: true })
-        .limit(4)
-
-      if (error) throw error
-      setOffers((data || []) as Offer[])
+      const data = await apiClient.catalog.list()
+      setOffers((data || []).sort((a: any, b: any) => a.sale_price - b.sale_price).slice(0, 4) as Offer[])
     } catch {
       setOffers([])
     } finally {
@@ -120,7 +114,7 @@ export default function Offers() {
             </button>
           </article>
         ))}
-      </div>
+        </div>
     </section>
   )
 }

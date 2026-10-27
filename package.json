@@ -8,7 +8,9 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "check:bootstrap": "node scripts/check-bootstrap.mjs"
+    "check:bootstrap": "node scripts/check-bootstrap.mjs",
+    "dev:api": "node --loader tsx scripts/serve-api.mjs",
+    "test:validation": "tsx scripts/test-validation.mts"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
@@ -17,7 +19,6 @@
     "typescript": "^7.0.2"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.118.0",
     "zod": "^4.6.7"
   }
 }

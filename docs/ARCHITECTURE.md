@@ -22,28 +22,30 @@ Este documento é a referência técnica permanente da arquitetura do MVP do Pet
              │ Funções serverless      │
              │  ├── POST /api/orders   │
              │  ├── :id/status         │
+             │  ├── /api/catalog       │
+             │  ├── /api/admin/*       │
              │  └── collector ingest   │
              └────────────┬────────────┘
                           │
                           ▼
-                      SUPABASE
-              ┌──────────┼──────────┐
-              │ Postgres │ Auth     │
-              │ Storage  │ RLS      │
-              └──────────┴──────────┘
-                        ▲
-                        │ ingestão protegida por token
-              ┌─────────┴─────────┐
-              │     COLLECTOR     │
-              │  Notebook (manual)│
-              │  Python           │
-              └───────────────────┘
+                    DataStore
+             ┌──────────┼──────────┐
+             │ JSON impl │ Future   │
+             │ (MVP)     │ Supabase │
+             └──────────────────────┘
+                          ▲
+                          │ ingestão protegida por token
+             ┌────────────┴────────────┐
+             │     COLLECTOR           │
+             │  Notebook (manual)      │
+             │  Python                 │
+             └─────────────────────────┘
 ```
 
 - O morador chega pelo QRCode e abre o PWA no Smartphone.
-- A aplicação pública lê o catálogo publicado diretamente do Supabase com `anon` + RLS.
-- O pedido é criado por uma função serverless da Vercel, que detém `service_role` server-side.
-- O Dashboard (área `/admin`) usa Supabase Auth para o único administrador.
+- A aplicação pública lê o catálogo publicado via API REST (`/api/catalog`).
+- O pedido é criado por uma função serverless da Vercel com autenticação de token.
+- O Dashboard (área `/admin`) usa token estático server-side para o único administrador.
 - O Collector, fora da Vercel, envia ofertas por uma função protegida por token.
 - WhatsApp é somente o canal externo via `wa.me`, sem integração automatizada.
 
@@ -53,13 +55,13 @@ Este documento é a referência técnica permanente da arquitetura do MVP do Pet
 |---|---|---|
 | 1 | **Sem Fastify** — funções serverless mínimas da Vercel (Node/TS) | ADR-001 |
 | 2 | Aplicação React única (público + `/admin`) com rotas lazy | Seção 4 |
-| 3 | Catálogo público via `supabase-js` (`anon` + RLS) + hooks próprios | Seções 4 e 7 |
+| 3 | Catálogo público via API REST (`/api/catalog`) com DataStore | Seções 4 e 7 |
 | 4 | Carrinho com Zustand + persist | Seção 4 |
 | 5 | Pedido transacional via `POST /api/orders` com precificação e validação server-side | Seções 6 e 9 |
 | 6 | Idempotência por `client_order_token`; transição pública restrita por `order_token` | Seção 9 |
 | 7 | Rate limiting mínimo por IP com `rate_guard` | Seção 9 |
-| 8 | Imagens no Supabase Storage: bucket público + bucket privado | Seção 8 |
-| 9 | Collector ingere via função protegida por token; `service_role` só server-side | Seção 12 |
+| 8 | Imagens: gerenciadas via curadoria; imagem pública definida antes da publicação | Seção 8 |
+| 9 | Collector ingere via função protegida por token; dados apenas server-side | Seção 12 |
 | 10 | `price_history` criado no GATE-03; sem TanStack Query | Seções 4 e 14 |
 | 11 | Markup 30% (`preço = custo × 1,30`), `pricing_type=markup` | Seção 13 |
 
@@ -74,7 +76,7 @@ Este documento é a referência técnica permanente da arquitetura do MVP do Pet
 ### 4.2. Estado
 
 - **Carrinho:** Zustand + `persist` — estado compartilhado entre cards, carrinho fixo e página de revisão, sobrevivendo a reload.
-- **Dados:** hooks próprios sobre `supabase-js` (anon) com estados de loading/erro/vazio.
+- **Dados públicos:** API REST (`/api/catalog`) com states de loading/erro/vazio.
   - **TanStack Query NÃO será adicionado.** Cache/refetch são cobertos pelo Service Worker (`network-first`) para o catálogo. Reavalia-se somente se o catálogo exigir paginação complexa, invalidação específica ou mutações otimistas.
 
 ### 4.3. PWA
@@ -105,9 +107,9 @@ QRCode → PWA
 ## 5. Dashboard
 
 - Mesma aplicação React, grupo de rotas `/admin/*` carregadas via lazy.
-- **Auth:** Supabase Auth (e-mail/senha, PKCE) para o único administrador.
-- **Proteção:** guard de rota verifica a sessão; sem sessão → `/admin/login`.
-- Dados via `supabase-js` com a sessão do admin + RLS; `service_role` nunca chega ao cliente.
+- **Auth:** Token estático server-side (`ADMIN_TOKEN`) para o único administrador.
+- **Proteção:** guard de rota verifica o token em `localStorage`; sem token → `/admin/login`.
+- **Dados:** via API REST (`/api/admin/*`) com token no header; dados sensíveis nunca expostos ao cliente.
 - Estrutura: Dashboard, Ofertas, Pedidos, Produtos, Categorias, Publicados, Configurações.
 - Experiência principal **Desktop**, responsivo.
 - Fora de escopo neste MVP: BI, estoque completo, logística, CRM, múltiplos admins/condomínios, automações complexas.
@@ -118,24 +120,31 @@ QRCode → PWA
 - **Funções serverless** em `api/` (Node.js + TypeScript), mínimas:
   - `POST /api/orders` — criação de pedido.
   - `POST /api/orders/:id/status` — transição pública restrita.
+  - `GET /api/catalog` — catálogo público (products + publications + categories).
+  - `/api/admin/*` — operações administrativas (protegidas por token).
   - ingestão do Collector — protegida por token.
 - Sem servidor permanente; sem Fastify.
-- Módulo compartilhado `api/_shared` com validação, precificação e montagem da mensagem do WhatsApp.
+- Módulo compartilhado `api/_shared` com validação (Zod), precificação, montagem da mensagem do WhatsApp e DataStore.
 
-## 7. Supabase
+## 7. Camada de dados (DataStore)
 
-- Um único projeto PostgreSQL.
-- **Separação público/interno** por tabelas, campos e RLS.
-- **Público (SELECT `anon`):** visão `public_catalog` (products ativos + publicações publicadas) e categorias ativas.
-- **Interno (sem acesso anon):** `sources`, `offers`, `price_history`, `offer_reviews`, campos internos de `publications`, `app_settings`.
-- **Pedidos:** `orders`/`order_items` sem INSERT direto de anon — apenas pela função serverless (`service_role`).
-- **Admin:** políticas RLS atreladas ao único usuário admin.
-- **Auth:** apenas administrativo (Supabase Auth).
+Para validação ágil do MVP, os dados são persistidos em **arquivos JSON** abstraídos pela interface `DataStore` (`api/_shared/datastore/`).
 
-## 8. Supabase Storage
+- `interface.ts` — interface abstrata com métodos para todas as entidades.
+- `JsonDataStore.ts` — implementação que lê/escreve arquivos JSON em `data/`.
+- `index.ts` — factory singleton (seleciona JSON para dev; Supabase para prod futuro).
 
-- **Bucket público:** imagem definitiva exibida ao morador (imprescindível para o produto público).
-- **Bucket privado:** imagens/insumos de curadoria interna e ofertas coletadas.
+**Separação público/interno** por endpoints e validação server-side (não mais por RLS):
+- **Público (via `/api/catalog`):** products ativos + publicações publicadas + categorias ativas.
+- **Interno (via `/api/admin/*`):** `sources`, `offers`, `price_history`, `offer_reviews`, campos internos de `publications`, `app_settings`.
+- **Pedidos:** `orders`/`order_items` criados apenas pela função serverless.
+- **Admin:** autenticação via token; proteção por endpoint.
+
+> **Nota sobre Vercel:** Funções serverless têm filesystem efêmero (apenas `/tmp`, reset periódico). JSON persiste localmente para desenvolvimento e testes. Produção requer migração para Supabase (plano arquivado em `supabase/migrations/`).
+
+## 8. Imagens
+
+- **Pública:** imagem definitiva exibida ao morador; adicionada/selecionada pelo admin antes da publicação.
 - A imagem apresentada ao morador nunca revela a origem externa.
 
 ## 9. Funções serverless — contratos
@@ -159,13 +168,13 @@ Transição pública restrita: somente `CRIADO → ENCAMINHADO_WHATSAPP`, exigin
 
 ### 9.3. Ingestão do Collector
 
-Função protegida por **token de ingestão**; valida o token e escreve ofertas com `service_role` server-side.
+Função protegida por **token de ingestão**; valida o token e escreve ofertas server-side via DataStore.
 
 ## 10. Fluxo de pedidos
 
 ```text
 QRCode → PWA
-→ anon+RLS lê public_catalog
+→ /api/catalog lê product_catalog (products + publications + categories)
 → carrinho local persistido (Zustand)
 → checkout: gera client_order_token + pet + bloco + unidade (validação de formato)
 → POST /api/orders
@@ -194,14 +203,14 @@ QRCode → PWA
 - Execução inicial manual no notebook do responsável.
 - Python + Browser Harness + Chromium (Gates 07+).
 - Envia ofertas por **função de ingestão protegida por token**.
-- `service_role` permanece exclusivamente server-side: **nunca no notebook, nunca no cliente**.
+- Dados apenas server-side: **nunca expostos no notebook, nunca no cliente**.
 - Nunca publica automaticamente; curadoria humana no Dashboard.
 
 ## 13. Segurança
 
-- `service_role` somente server-side.
-- `anon` público limitado ao catálogo publicado.
-- RLS como defesa em profundidade.
+- `service_role` não aplicável — sem Supabase no MVP de validação.
+- Admin via token estático (`ADMIN_TOKEN`), validado server-side.
+- `anon` substituído por API REST controlada (`/api/catalog` retorna apenas campos públicos).
 - Idempotência de pedido (`client_order_token`).
 - Transição de status pública restrita (`order_token`, apenas `CRIADO → ENCAMINHADO_WHATSAPP`).
 - Rate limiting por IP via `rate_guard`; reforços adicionais no GATE-12.
@@ -211,7 +220,7 @@ QRCode → PWA
 
 ## 14. Modelo conceitual de dados
 
-Definição conceitual; criação em SQL no GATE-03.
+Definição conceitual; implementação em JSON no MVP, SQL preservado em `supabase/migrations/` para migração futura.
 
 | Entidade | Finalidade | Principais campos | Público/Interno |
 |---|---|---|---|
@@ -221,8 +230,8 @@ Definição conceitual; criação em SQL no GATE-03.
 | offers | Oportunidades coletadas | id, product_id, source_id, source_url, preços, availability, status | Interno |
 | price_history | Histórico de preço/disponibilidade | id, product_id, source_id, price, availability, collected_at | Interno (GATE-03) |
 | offer_reviews | Curadoria humana | id, offer_id, admin_user_id, status, notes, reviewed_at | Interno |
-| publications | Visibilidade pública e preço | id, offer_id, product_id, sale_price, pricing_type, pricing_value, datetimes, status | Interno/parte pública via view |
-| orders | Pedidos | id, nome_pet, bloco, numero_unidade, total, status, client_order_token, order_token, timestamps | Criação via API |
+| publications | Visibilidade pública e preço | id, offer_id, product_id, sale_price, pricing_type, pricing_value, datetimes, status | Interno/parte pública via API |
+| orders | Pedidos | id, pet_name, block, unit_number, total, status, client_order_token, order_token, timestamps | Criação via API |
 | order_items | Itens do pedido | id, order_id, product_id, quantidade, preco_unitario, subtotal, product_name_snapshot | Criação via API |
 | app_settings | Configuração do condomínio | id, condominio_nome, whatsapp_number, timestamps | Interno |
 | rate_guard | Controle de abuso | id, client_ip, window_start, request_count, created_at | Interno |
@@ -236,11 +245,17 @@ Estados de oferta: `pending`, `approved`, `published`, `rejected`, `expired`, `u
 pet-em-casa/
 ├── frontend/            # React+Vite PWA (público + admin lazy)
 │   ├── src/public/      # Home, catálogo, checkout
-│   └── src/admin/       # Dashboard protegido
+│   └── src/admin/       # Dashboard protegido (lazy)
 ├── api/                 # Vercel Functions (Node/TS)
-│   └── _shared/         # validação, preço, mensagem WhatsApp
+│   └── _shared/
+│       ├── datastore/   # interface abstrata + implementação JSON
+│       ├── validation.ts
+│       ├── pricing.ts
+│       ├── whatsapp.ts
+│       └── rate-limit.ts
+├── data/                # arquivos JSON (validação MVP)
 ├── supabase/
-│   └── migrations/      # GATE-03+
+│   └── migrations/      # futura migração (arquivo histórico)
 ├── collector/           # Python (Gates 07+)
 ├── scripts/
 └── docs/                # + docs/gates/ + docs/ADRS/
@@ -252,8 +267,8 @@ pet-em-casa/
 - **TanStack Query descartado:** poucas leituras públicas; Service Worker cobre cache/refetch. Trade-off aceito; reavaliar sob demanda.
 - **Zustand + persist mantido:** estado compartilhado e persistência do carrinho com dependência mínima.
 - **Aplicação única:** um projeto Vercel para público e `/admin`; deploy e manutenção únicos.
-- **RLS como fronteira pública:** o frontend público acessa somente o catálogo publicado; tudo o que é sensível permanece interno.
-- **`service_role` centralizado:** pedido e ingestão passam por funções serverless, evitando credenciais privilegiadas fora do servidor.
+- **API REST como fronteira pública:** o frontend público acessa apenas `/api/catalog`; tudo o que é sensível permanece server-side.
+- **DataStore abstrato:** camada de dados desacoada; JSON para MVP, Supabase para produção futura.
 
 ## 17. Referências
 

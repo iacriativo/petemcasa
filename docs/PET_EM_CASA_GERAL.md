@@ -13,7 +13,7 @@ Este é o documento mestre do Projeto **Pet em Casa**.
 
 O projeto deverá manter seu código e seus dados de desenvolvimento isolados de outros projetos.
 
-A hospedagem do MVP será feita na **Vercel**, com o banco de dados no **Supabase**. O servidor local/doméstico não faz parte da infraestrutura de hospedagem do MVP.
+A hospedagem do MVP será feita na **Vercel**. Para validação ágil do MVP, os dados serão persistidos em **arquivos JSON locais** abstraídos por uma camada `DataStore`. Após validação, migrará-se para **Supabase/PostgreSQL**. O servidor local/doméstico não faz parte da infraestrutura de hospedagem do MVP.
 
 O OpenCode deve ler este documento antes de qualquer implementação e nunca assumir que o diretório atual pertence ao Pet em Casa.
 
@@ -42,7 +42,7 @@ Smartphone
    ↓
 Pet em Casa — PWA
    ↓
-Catálogo
+Catálogo (via /api/catalog)
    ↓
 Produto
    ↓
@@ -50,7 +50,7 @@ Carrinho
    ↓
 Identificação do pedido
    ↓
-Supabase
+API REST (/api/orders)
    ↓
 WhatsApp
 ```
@@ -89,9 +89,7 @@ Informar:
    ↓
 Criar Order + OrderItems
    ↓
-Supabase
-   ↓
-Abrir WhatsApp
+WhatsApp
    ↓
 Atendimento humano
    ↓
@@ -158,7 +156,7 @@ Não haverá pagamento integrado nem sistema de frete no MVP.
 
 ### 3 — Administração
 - 1 administrador.
-- Supabase Auth.
+- Auth via token estático server-side (MVP).
 - Sem conta para moradores.
 
 ### 4 — Preço
@@ -178,7 +176,7 @@ Não haverá pagamento integrado nem sistema de frete no MVP.
 - Executado no notebook do responsável.
 - Execução inicialmente manual.
 - Python + Browser Harness + Chromium.
-- Dados enviados ao Supabase.
+- Dados enviados ao armazenamento local (JSON), abstraído por DataStore.
 - Automação será avaliada posteriormente, após validação dos Gates 07–09.
 
 ### 8 — Dashboard
@@ -457,12 +455,12 @@ unavailable
 
 # 10. SEPARAÇÃO INTERNO/PÚBLICO
 
-No MVP, a separação entre dados internos e públicos será feita principalmente por **modelo de dados, tabelas, campos e regras de acesso no Supabase**, e não por arquivos JSON locais.
+No MVP de validação, a separação entre dados internos e públicos será feita por **camada de dados abstraída (DataStore) e API REST controlada server-side**. O frontend público acessa apenas endpoints específicos (`/api/catalog`); dados internos, credenciais e curadoria permanecem server-side.
 
-Interno:
+Interno (armazenado em `data/`):
 
 ```text
-Supabase
+DataStore (JSON)
 ├── products
 ├── sources
 ├── offers
@@ -470,6 +468,8 @@ Supabase
 ├── offer_reviews
 └── publications
 ```
+
+Pode conter origem, URL, preço de aquisição, markup, histórico, logs e curadoria.
 
 Pode conter origem, URL, preço de aquisição, markup, histórico, logs e curadoria.
 
@@ -487,11 +487,9 @@ O frontend público nunca deve ter acesso direto a dados internos, credenciais a
 
 # 11. MODELO DE DADOS
 
-O MVP usará **Supabase/PostgreSQL como banco de dados desde o início**.
+O MVP de validação usará **armazenamento em arquivos JSON local**, abstraído por uma interface `DataStore` para fácil migração futura.
 
-> **O modelo deve ser simples e adequado ao MVP, mas estruturado como entidades relacionais para evitar retrabalho.**
-
-Os JSONs, quando utilizados, serão apenas formatos auxiliares de importação, exportação, fixtures ou testes — não serão o banco oficial do MVP.
+> **Após validação do MVP, migrará-se para Supabase/PostgreSQL.** Os JSONs seguem o mesmo esquema relacional das migrations Supabase preservadas em `supabase/migrations/`.
 
 Entidades:
 
@@ -584,25 +582,25 @@ status
 
 ---
 
-# 12. BANCO DE DADOS DO MVP
+# 12. ARMAZENAMENTO DE DADOS DO MVP
 
-O banco oficial do MVP será o **Supabase**, utilizando **PostgreSQL**.
+Para validação ágil, o MVP utiliza **arquivos JSON locais** em `data/`, abstraídos pela interface `DataStore` (`api/_shared/datastore/`). 
 
 Estrutura conceitual:
 
 ```text
-Supabase
+DataStore (JSON)
 ├── products
 ├── sources
 ├── offers
 ├── price_history
 ├── offer_reviews
-└── publications
+├── publications
+├── orders
+└── order_items
 ```
 
-Os IDs deverão ser estáveis e gerados pelo banco. Não usar posição em arrays como identidade.
-
-JSON poderá ser utilizado somente para fixtures, testes, importações/exportações ou dados temporários do coletor, quando isso for útil.
+Os IDs são estáveis (UUID). Após validação do MVP, migrará-se para Supabase/PostgreSQL mantendo a mesma interface `DataStore`.
 
 ---
 
@@ -617,9 +615,9 @@ JSON poderá ser utilizado somente para fixtures, testes, importações/exporta�
 | Coletor | Python |
 | Browser | Browser Harness |
 | Navegador | Chromium |
-| Dados | Supabase / PostgreSQL |
+| Dados | JSON local (DataStore) — migração para Supabase após validação |
 | Hospedagem da aplicação | Vercel |
-| Banco de dados | Supabase |
+| Armazenamento de dados do MVP | Arquivos JSON em `data/` (validação ágil) |
 | Ambiente local | Desenvolvimento/testes |
 | Containerização | Opcional, somente quando necessária ao desenvolvimento/coleta |
 
@@ -631,7 +629,7 @@ JSON poderá ser utilizado somente para fixtures, testes, importações/exporta�
 
 Docker **não é requisito da hospedagem do MVP**.
 
-A aplicação será hospedada na **Vercel** e o banco de dados no **Supabase**.
+A aplicação será hospedada na **Vercel**. Para validação ágil, os dados são persistidos localmente em JSON via camada `DataStore`. Migração para Supabase/PostgreSQL após validação do MVP.
 
 Docker poderá ser utilizado localmente para desenvolvimento ou para componentes de coleta que necessitem de ambiente controlado, mas não deve ser criado apenas por convenção.
 
@@ -645,9 +643,11 @@ Não criar arquitetura distribuída desnecessária no MVP.
 pet-em-casa/
 ├── frontend/            # aplicação React única (público + /admin)
 ├── api/
-│   └── _shared/         # funções serverless Vercel — validação, preço, mensagem
+│   └── _shared/
+│       └── datastore/   # interface abstrata + implementação JSON
+├── data/                # arquivos JSON (validação MVP)
 ├── supabase/
-│   └── migrations/
+│   └── migrations/      # futura migração (arquivo histórico)
 ├── collector/
 ├── scripts/
 ├── docs/
@@ -763,7 +763,7 @@ Implementar verificação de preço, disponibilidade, alteração e expiração.
 
 ## GATE-12 — Segurança
 
-Validar variáveis de ambiente, credenciais, permissões, proteção do Dashboard, separação entre dados internos e públicos, políticas de acesso do Supabase e não exposição do CDP.
+Validar variáveis de ambiente, credenciais, permissões, proteção do Dashboard, separação entre dados internos e públicos e não exposição do CDP.
 
 ## GATE-13 — Teste de carga
 
@@ -829,11 +829,11 @@ Não antecipar:
 1. **Isolamento:** Pet em Casa possui ambiente próprio.
 2. **Curadoria humana:** oferta nova passa por aprovação.
 3. **Fonte invisível:** lojas externas não aparecem no frontend público.
-4. **Supabase como banco:** o MVP utiliza PostgreSQL via Supabase; JSON é apenas formato auxiliar quando necessário.
+4. **Dados abstraídos:** o MVP usa armazenamento JSON via camada DataStore para validação ágil; Supabase/PostgreSQL será adotado após validação, mantendo a mesma interface.
 5. **Automação desacoplada:** Browser Harness não conversa diretamente com frontend público.
 6. **Dados internos separados:** aquisição e publicação possuem estruturas distintas.
 7. **Gates:** não avançar sem validar o anterior.
-8. **Simplicidade:** Vercel + Supabase como base do MVP; não adicionar complexidade sem necessidade.
+8. **Simplicidade:** Vercel + JSON/DataStore como base do MVP; Supabase adicionado após validação; não adicionar complexidade sem necessidade.
 
 ---
 
@@ -855,8 +855,8 @@ Depois provar:
 GATE-00  VALIDATED
 GATE-01  VALIDATED
 GATE-02  VALIDATED
-GATE-03  VALIDATED
-GATE-04  VALIDATED
+GATE-03  ARCHIVED (substituído por JSON/DataStore)
+GATE-04  ARCHIVED (substituído por JSON/DataStore)
 GATE-05  PENDING
 GATE-06  PENDING
 GATE-07  PENDING
@@ -869,7 +869,7 @@ GATE-13  PENDING
 GATE-14  PENDING
 ```
 
-O GATE-04 foi validado e encerrado. O GATE-05 permanece PENDING até novo planejamento aprovado.
+Os Gates 03 e 04 foram arquivados (supersedidos pela remoção do Supabase e migração para JSON/DataStore — veja `docs/gates/GATE-PRE-PLANO-REMOCAO-SUPABASE.md`). O GATE-05 permanece PENDING até novo planejamento aprovado.
 
 ---
 
